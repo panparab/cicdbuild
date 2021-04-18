@@ -1,0 +1,56 @@
+pipeline{
+    agent any
+        tools {
+      maven 'maven1'
+    }
+    environment {
+      DOCKER_TAG = getVersion()
+    }
+    stages{
+        stage('SCM'){
+            steps{
+                git branch: 'main', credentialsId: 'github',
+                url: 'https://github.com/panparab/cicdbuild.git'
+            }    
+        }
+        stage('Maven Build'){
+            steps{
+                sh "mvn clean package"
+            }
+        }
+        
+                stage('Docker Build'){
+            steps{
+                sh "docker build . -t panparab/webapp:${DOCKER_TAG} "
+            }
+            
+        }
+        
+               stage('DockerHub Push'){
+            steps{
+                withCredentials([string(credentialsId: 'dockerhubpass', variable: 'dockerhubpass')]) {
+                    sh "docker login -u panparab -p ${dockerhubpass}"
+                }
+                
+                sh "docker push panparab/webapp:${DOCKER_TAG} "
+            }
+        }
+        
+                stage('Create Webapp Loadbalancer '){
+            steps{
+              ansiblePlaybook extras: "-e DOCKER_TAG=${DOCKER_TAG}", installation: 'ansible', playbook: 'ans-webapp-svc-deployment.yaml'
+            }
+        }
+        
+               stage('Deploy Webapp Service'){
+            steps{
+              ansiblePlaybook extras: "-e DOCKER_TAG=${DOCKER_TAG}", installation: 'ansible', playbook: 'ans-webapp-deployment.yaml'
+            }
+        }
+    }
+  }
+  
+  def getVersion(){
+    def commitHash = sh label: '', returnStdout: true, script: 'git rev-parse --short HEAD'
+    return commitHash
+}
