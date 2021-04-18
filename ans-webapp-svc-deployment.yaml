@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  become: true
+  become_user: ec2-user
+  vars:
+    ansible_python_interpreter: "/usr/bin/python3"
+  tasks:
+  - name:  Webapp service deployment 
+    k8s_service:
+      state: present
+      name: webapp-svc
+      namespace: default
+      type: LoadBalancer
+      ports:
+      - port: 8080
+        protocol: TCP
+      selector:
+        env: dev
