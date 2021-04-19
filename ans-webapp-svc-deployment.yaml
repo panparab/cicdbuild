@@ -5,14 +5,15 @@
   vars:
     ansible_python_interpreter: "/usr/bin/python3"
   tasks:
-  - name:  Webapp service deployment 
+  - name:  Webapp service deployment
     k8s_service:
       state: present
       name: webapp-svc
       namespace: default
       type: LoadBalancer
       ports:
-      - port: 80
-        protocol: TCP
+      - protocol: TCP
+        port: 80
+        targetport: 8080
       selector:
         env: dev
